@@ -1,0 +1,29 @@
+[keyboard]
+bindings = [
+  # This ensures Cmd+C is passed to the terminal application (Neovim).
+  { key = "C", mods = "Command", action = "None" },
+
+  # This allows you to use Cmd+Shift+C for Alacritty's native copy.
+  { key = "C", mods = "Command|Shift", action = "Copy" },
+]
+
+# The above binding passes Cmd+C to the application (nvim).
+# Alacritty's native copy is now Cmd+Shift+C by default.
+
+
+[font]
+# Font size in points
+size = 13.0
+
+[font.normal]
+family = "JetBrainsMono Nerd Font Mono"      # Replace with any installed font
+style = "Regular"
+
+[font.bold]
+family = "JetBrainsMono Nerd Font Mono"
+style = "Bold"
+
+[font.italic]
+family = "JetBrainsMono Nerd Font Mono"
+style = "Italic"
+
