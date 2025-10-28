@@ -40,3 +40,14 @@ vim.keymap.set("n", "<leader>yrp", function()
   vim.fn.setreg("+", relative_path)
   print("Copied relative path: " .. relative_path)
 end, { desc = "Copy relative file path" })
+
+-- Custom <Esc> behavior for dismissing Copilot/cmp suggestions without leaving insert mode
+-- This was moved to lua/plugins/cmp.lua to ensure cmp is loaded.
+
+-- Keymaps for commenting
+vim.keymap.set("n", "<D-/>", function()
+  vim.cmd("normal gcc")
+end, { noremap = true, silent = true, desc = "Toggle line comment" })
+vim.keymap.set("v", "<D-/>", function()
+  vim.cmd("normal gc")
+end, { noremap = true, silent = true, desc = "Toggle line comment" })

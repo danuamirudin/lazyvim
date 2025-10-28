@@ -4,4 +4,4 @@ vim.opt.cmdheight = 2 -- more space at the bottom
 vim.g.autoformat = false
 
 vim.opt.wrap = true
-vim.opt.clipboard = "" -- don't use system clipboard by default
+-- vim.opt.clipboard = "" -- don't use system clipboard by default
