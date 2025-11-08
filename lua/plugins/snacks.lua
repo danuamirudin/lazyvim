@@ -54,6 +54,8 @@ return {
         exclude = {
           "vendor",
           "node_modules",
+          ".svn",
+          ".git",
         },
         grep = {},
       },
@@ -83,23 +85,9 @@ return {
       {
         "<D-p>",
         function()
-          require("snacks.picker").grep({
-            args = {
-              "--vimgrep",
-              "--smart-case",
-              "--hidden",
-              "--glob",
-              "!**/vendor/**",
-              "--glob",
-              "!vendor/**",
-              "--glob",
-              "!**node_modules/**",
-              "--glob",
-              "!/Users/ahmadhasanudin/projects/old_app/**",
-            },
-          })
+          require("snacks.picker").files()
         end,
-        desc = "Grep with exclusions (Cmd+P)",
+        desc = "Find files (Cmd+P)",
       },
       {
         "<D-S-f>",

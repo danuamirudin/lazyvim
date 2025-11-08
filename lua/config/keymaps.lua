@@ -64,3 +64,8 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.keymap.set("n", "-", "A;<Esc>", { buffer = true, desc = "Add semicolon at end of line" })
   end,
 })
+
+-- Theme Selector (like NvChad)
+vim.keymap.set("n", "<leader>th", function()
+  require("config.themes").theme_selector_simple()
+end, { desc = "Theme Selector" })
