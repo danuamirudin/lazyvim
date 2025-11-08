@@ -56,3 +56,11 @@ end, { noremap = true, silent = true, desc = "Toggle line comment" })
 vim.keymap.set("n", "<D-S-o>", function()
   require("snacks.picker").lsp_symbols()
 end, { desc = "Go to Symbol" })
+
+-- PHP-specific keybinding: - to add semicolon at end of line
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "php",
+  callback = function()
+    vim.keymap.set("n", "-", "A;<Esc>", { buffer = true, desc = "Add semicolon at end of line" })
+  end,
+})
