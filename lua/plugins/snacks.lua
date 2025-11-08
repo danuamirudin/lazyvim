@@ -52,6 +52,10 @@ return {
       },
       picker = {
         sources = {
+          files = {
+            hidden = true,
+            ignored = true,
+          },
           explorer = {
             layout = {
               layout = {
@@ -65,6 +69,7 @@ return {
           "node_modules",
           ".svn",
           ".git",
+          "public",
         },
         grep = {},
       },
