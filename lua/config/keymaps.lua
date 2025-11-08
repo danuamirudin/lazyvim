@@ -69,3 +69,29 @@ vim.api.nvim_create_autocmd("FileType", {
 vim.keymap.set("n", "<leader>th", function()
   require("config.themes").theme_selector_simple()
 end, { desc = "Theme Selector" })
+
+-- Insert mode navigation with Ctrl+hjkl
+vim.keymap.set("i", "<C-h>", "<Left>", { desc = "Move left in insert mode" })
+vim.keymap.set("i", "<C-l>", "<Right>", { desc = "Move right in insert mode" })
+vim.keymap.set("i", "<C-j>", "<Down>", { desc = "Move down in insert mode" })
+vim.keymap.set("i", "<C-k>", "<Up>", { desc = "Move up in insert mode" })
+
+-- Visual mode keymaps
+vim.keymap.set("v", "<Tab>", ">gv", { desc = "Indent and reselect" })
+vim.keymap.set("v", "<S-Tab>", "<gv", { desc = "Unindent and reselect" })
+vim.keymap.set("v", "y", "ygv<Esc>", { desc = "Yank and reselect" })
+vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv", { desc = "Move selection down" })
+vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv", { desc = "Move selection up" })
+
+-- Normal mode keymaps
+vim.keymap.set("n", "<leader>h", "^", { desc = "Go to first non-blank character" })
+vim.keymap.set("n", "<leader>l", "$", { desc = "Go to end of line" })
+vim.keymap.set("n", "J", ":m .+1<CR>==", { desc = "Move line down" })
+vim.keymap.set("n", "K", ":m .-2<CR>==", { noremap = true, silent = true, desc = "Move line up" })
+
+-- Override K mapping after LSP attaches
+vim.api.nvim_create_autocmd("LspAttach", {
+  callback = function(args)
+    vim.keymap.set("n", "K", ":m .-2<CR>==", { buffer = args.buf, noremap = true, silent = true, desc = "Move line up" })
+  end,
+})
