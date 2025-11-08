@@ -8,12 +8,17 @@ return {
         ["Find Under"] = "<D-d>", -- Cmd + D (Mac) - Add next occurrence
         ["Find Subword Under"] = "<D-d>", -- same for sub-words
         ["Skip Region"] = "<D-k>", -- Cmd + K - Skip current and find next
+        ["Add Cursor Down"] = "<D-Down>",
+        ["Add Cursor Up"] = "<D-Up>",
       }
 
       -- Optional tweaks
       vim.g.VM_mouse_mappings = 1
       vim.g.VM_show_warnings = 0
       vim.g.VM_silent_exit = 1
+      
+      -- Start VM immediately when using Cmd+D
+      vim.g.VM_default_mappings = 1
 
       vim.api.nvim_create_autocmd("User", {
         pattern = "visual_multi_exit",
@@ -25,6 +30,14 @@ return {
       })
     end,
     keys = {
+      {
+        "<D-d>",
+        function()
+          vim.cmd([[call vm#commands#find_under(0, 1)]])
+        end,
+        mode = { "n", "v" },
+        desc = "Add cursor to next match (Cmd+D)",
+      },
       {
         "<D-L>",
         function()

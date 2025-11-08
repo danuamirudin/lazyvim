@@ -6,6 +6,8 @@
 vim.keymap.set("i", "jk", "<Esc>", { desc = "Escape from Insert mode" })
 vim.keymap.del("n", "<leader><leader>")
 vim.keymap.set("n", "<leader><leader>", "<C-^>", { desc = "Switch to last buffer" })
+-- select all
+vim.keymap.set("n", "<D-a>", "gg<S-v>G", { desc = "Select all" })
 --[[ leader w to save  ]]
 --[[ vim.keymap.set("n", "<leader>w", ":w<C-R>", { desc = "Save file" }) ]]
 vim.opt.mouse = ""
@@ -97,6 +99,11 @@ vim.keymap.set("n", "K", ":m .-2<CR>==", { noremap = true, silent = true, desc =
 -- Override K mapping after LSP attaches
 vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
-    vim.keymap.set("n", "K", ":m .-2<CR>==", { buffer = args.buf, noremap = true, silent = true, desc = "Move line up" })
+    vim.keymap.set(
+      "n",
+      "K",
+      ":m .-2<CR>==",
+      { buffer = args.buf, noremap = true, silent = true, desc = "Move line up" }
+    )
   end,
 })
