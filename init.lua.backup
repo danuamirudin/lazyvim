@@ -1,0 +1,39 @@
+-- bootstrap lazy.nvim, LazyVim and your plugins
+require("config.lazy")
+
+-- Load saved theme
+vim.defer_fn(function()
+  require("config.themes").load_theme()
+end, 100)
+
+-- Load custom highlights
+require("config.highlights")
+-- Add this to your Neovim config (init.lua or init.vim)
+-- This will trigger the upload service on file save
+
+local function upload_on_save()
+    local filepath = vim.fn.expand('%:p')
+    local base_path = '/Users/ahmadhasanudin/project/pintro/pintro_ng'
+    
+    -- Only trigger for files within the project
+    if vim.startswith(filepath, base_path) then
+        local json_data = vim.fn.json_encode({ file_path = filepath })
+        local curl_cmd = string.format(
+            "curl -s -X POST http://localhost:8765/upload -H 'Content-Type: application/json' -d '%s' &",
+            json_data
+        )
+        vim.fn.system(curl_cmd)
+    end
+end
+
+-- Create an autocommand group
+local group = vim.api.nvim_create_augroup('SFTPUpload', { clear = true })
+
+-- Trigger on BufWritePost (after file is saved)
+vim.api.nvim_create_autocmd('BufWritePost', {
+    group = group,
+    pattern = '/Users/ahmadhasanudin/project/pintro/pintro_ng/*',
+    callback = upload_on_save,
+})
+
+print("SFTP upload on save enabled for pintro_ng")
