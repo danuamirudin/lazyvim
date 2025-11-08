@@ -107,3 +107,21 @@ vim.api.nvim_create_autocmd("LspAttach", {
     )
   end,
 })
+
+-- SFTP Commands
+local sftp = require("config.sftp")
+
+-- Leader f -> Upload folder (with prompt)
+vim.keymap.set("n", "<leader>fU", function()
+  sftp.upload_folder_prompt()
+end, { desc = "SFTP: Upload Folder" })
+
+-- Leader d -> Download current buffer
+vim.keymap.set("n", "<leader>fd", function()
+  sftp.download_current_buffer()
+end, { desc = "SFTP: Download Current File" })
+
+-- Leader D -> Download folder (with prompt)
+vim.keymap.set("n", "<leader>fD", function()
+  sftp.download_folder_prompt()
+end, { desc = "SFTP: Download Folder" })
