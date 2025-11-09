@@ -14,7 +14,10 @@ M.config = {
 
 -- Helper function to extract project info from path
 local function get_project_info(filepath)
-  -- First, try to get workspace name
+  -- First, use current working directory as the base
+  local cwd = vim.fn.getcwd()
+  
+  -- Try to get workspace name
   local ok, workspaces = pcall(require, "workspaces")
   if ok then
     local workspace_name = workspaces.name()
@@ -26,10 +29,17 @@ local function get_project_info(filepath)
     end
   end
 
-  -- Fallback to pattern matching
+  -- Fallback: Use cwd if file is within it
+  if filepath:sub(1, #cwd) == cwd then
+    local name = vim.fn.fnamemodify(cwd, ":t")
+    return cwd, name
+  end
+
+  -- Fallback to pattern matching on filepath
   local patterns = {
     "(/Users/[^/]+/project/[^/]+/([^/]+))/", -- /Users/*/project/*/PROJECT_NAME/
     "(/Users/[^/]+/project/([^/]+))/", -- /Users/*/project/PROJECT_NAME/
+    "(/Users/[^/]+/%.config/([^/]+))/", -- /Users/*/.config/PROJECT_NAME/
   }
 
   for _, pattern in ipairs(patterns) do
@@ -86,6 +96,15 @@ end
 
 -- Main SFTP upload function
 function M.upload(filepath)
+  -- Get current working directory
+  local cwd = vim.fn.getcwd()
+  
+  -- Check if file is within current workspace
+  if filepath:sub(1, #cwd) ~= cwd then
+    -- File is from a different workspace, skip silently
+    return
+  end
+  
   local project_root, base_root = get_project_info(filepath)
 
   if not base_root then
@@ -379,6 +398,15 @@ function M.auto_stop()
   if M.is_running() and is_last_nvim_instance() then
     M.stop()
   end
+end
+
+-- Reload SFTP config (useful when switching workspaces)
+function M.reload_config()
+  -- The config is read dynamically each time, so just notify
+  vim.schedule(function()
+    local cwd = vim.fn.getcwd()
+    vim.notify("SFTP: Switched to " .. vim.fn.fnamemodify(cwd, ":t"), vim.log.levels.INFO)
+  end)
 end
 
 return M

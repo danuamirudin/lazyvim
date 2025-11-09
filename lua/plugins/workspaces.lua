@@ -8,15 +8,33 @@ return {
       require("workspaces").setup({
         path = vim.fn.stdpath("data") .. "/workspaces",
         hooks = {
-          open = function()
-            -- Only load session if it exists for this workspace
-            local ok, persistence = pcall(require, "persistence")
-            if ok then
-              local session_file = require("persistence").current()
-              if vim.fn.filereadable(session_file) == 1 then
-                persistence.load()
+          open = function(name, path)
+            -- Change directory first
+            vim.cmd("cd " .. path)
+            
+            -- Load session after switching workspace
+            vim.schedule(function()
+              local ok, persistence = pcall(require, "persistence")
+              if ok then
+                -- Close all buffers before loading session
+                vim.cmd("silent! %bdelete")
+                
+                local session_file = persistence.current()
+                if session_file and vim.fn.filereadable(session_file) == 1 then
+                  -- Load the session
+                  persistence.load()
+                  vim.notify("Loaded session for: " .. name, vim.log.levels.INFO)
+                else
+                  -- No session file, open file explorer
+                  vim.notify("No session found for: " .. name, vim.log.levels.INFO)
+                  vim.cmd("e .")
+                end
               end
-            end
+              
+              -- Reload SFTP config for new workspace
+              local sftp = require("config.sftp")
+              sftp.reload_config()
+            end)
           end,
         },
       })
@@ -50,6 +68,7 @@ return {
     event = "BufReadPre",
     opts = {
       options = { "buffers", "curdir", "tabpages", "winsize", "help", "globals", "skiprtp" },
+      dir = vim.fn.stdpath("state") .. "/sessions/",
     },
     keys = {
       {
@@ -58,6 +77,14 @@ return {
           require("persistence").load()
         end,
         desc = "Restore Session",
+      },
+      {
+        "<leader>qS",
+        function()
+          require("persistence").save()
+          vim.notify("Session saved!", vim.log.levels.INFO)
+        end,
+        desc = "Save Session",
       },
       {
         "<leader>ql",
