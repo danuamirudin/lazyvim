@@ -23,10 +23,10 @@ return {
                 if session_file and vim.fn.filereadable(session_file) == 1 then
                   -- Load the session
                   persistence.load()
-                  vim.notify("Loaded session for: " .. name, vim.log.levels.INFO)
+                  vim.notify("✓ " .. name, vim.log.levels.INFO)
                 else
                   -- No session file, open file explorer
-                  vim.notify("No session found for: " .. name, vim.log.levels.INFO)
+                  vim.notify("⚠ " .. name .. " (no session)", vim.log.levels.WARN)
                   vim.cmd("e .")
                 end
               end
@@ -82,7 +82,7 @@ return {
         "<leader>qS",
         function()
           require("persistence").save()
-          vim.notify("Session saved!", vim.log.levels.INFO)
+          vim.notify("✓ Session saved", vim.log.levels.INFO)
         end,
         desc = "Save Session",
       },
