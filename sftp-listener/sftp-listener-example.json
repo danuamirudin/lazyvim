@@ -1,0 +1,13 @@
+{
+  "server_port": "8765",
+  "registered_projects": {
+    "pintro_ng": {
+      "local_base_path": "full-path",
+      "sftp_host": "0.0.0.0",
+      "sftp_port": "22",
+      "sftp_user": "username",
+      "sftp_password": "password",
+      "sftp_base_path": "full-path"
+    }
+  }
+}

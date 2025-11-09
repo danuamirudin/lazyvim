@@ -125,3 +125,16 @@ end, { desc = "SFTP: Download Current File" })
 vim.keymap.set("n", "<leader>fD", function()
   sftp.download_folder_prompt()
 end, { desc = "SFTP: Download Folder" })
+
+-- SFTP Listener Controls
+vim.keymap.set("n", "<leader>fs", function()
+  sftp.start()
+end, { desc = "SFTP: Start Listener" })
+
+vim.keymap.set("n", "<leader>fS", function()
+  sftp.stop()
+end, { desc = "SFTP: Stop Listener" })
+
+vim.keymap.set("n", "<leader>ft", function()
+  sftp.toggle()
+end, { desc = "SFTP: Toggle Listener" })

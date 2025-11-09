@@ -10,15 +10,25 @@
 -- Import shared SFTP module
 local sftp = require("config.sftp")
 
+-- Auto-start SFTP listener if configured
+sftp.auto_start()
+
+-- Auto-stop SFTP listener when last nvim exits
+vim.api.nvim_create_autocmd("VimLeavePre", {
+  group = vim.api.nvim_create_augroup("sftp_auto_stop", { clear = true }),
+  callback = function()
+    sftp.auto_stop()
+  end,
+})
+
 vim.api.nvim_create_autocmd({ "FocusLost", "BufLeave", "WinLeave" }, {
   group = vim.api.nvim_create_augroup("autosave_on_focus_change", { clear = true }),
   callback = function()
     if vim.bo.modified and vim.bo.buflisted and vim.fn.expand("%") ~= "" then
       local filepath = vim.fn.expand("%:p")
       vim.cmd("silent! write")
-      -- Trigger SFTP upload after autosave
+      -- Trigger SFTP upload after autosave (notification handled by sftp module)
       sftp.upload(filepath)
-      vim.notify(" 💾 " .. vim.fn.expand("%:t"))
     end
   end,
 })

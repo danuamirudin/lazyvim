@@ -1,0 +1,9 @@
+# Ignore the compiled binary
+sftp-listener
+
+# Ignore Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib

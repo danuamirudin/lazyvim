@@ -3,6 +3,15 @@
 
 local M = {}
 
+-- Configuration
+M.config = {
+  auto_start = true, -- Set to false to disable auto-start
+  listener_path = vim.fn.stdpath("config") .. "/sftp-listener",
+  config_path = vim.fn.stdpath("config") .. "/sftp-listener.json",
+  pid_file = vim.fn.stdpath("config") .. "/.sftp-listener.pid",
+  log_file = vim.fn.stdpath("config") .. "/sftp-listener.log",
+}
+
 -- Helper function to extract project info from path
 local function get_project_info(filepath)
   -- First, try to get workspace name
@@ -40,7 +49,7 @@ local function call_server(endpoint, payload, callback)
   vim.fn.writefile({ json_data }, tmpfile)
 
   local curl_cmd = string.format(
-    "curl -X POST http://localhost:8765%s -H 'Content-Type: application/json' -d @%s 2>&1 && rm %s",
+    "curl -s -X POST http://localhost:8765%s -H 'Content-Type: application/json' -d @%s 2>&1 && rm %s",
     endpoint,
     tmpfile,
     tmpfile
@@ -50,15 +59,26 @@ local function call_server(endpoint, payload, callback)
     stdout_buffered = true,
     on_stdout = function(_, data)
       if data and #data > 0 then
-        local response = table.concat(data, "\n")
-        if callback then
-          callback(response)
+        local response = table.concat(data, "\n"):gsub("^%s*(.-)%s*$", "%1")
+        if response ~= "" then
+          -- Try to parse JSON response
+          local ok, json_response = pcall(vim.fn.json_decode, response)
+          if ok and json_response then
+            if callback then
+              callback(json_response, nil)
+            end
+          else
+            -- Not JSON, pass raw response
+            if callback then
+              callback(response, nil)
+            end
+          end
         end
       end
     end,
     on_exit = function(_, exit_code)
       if exit_code ~= 0 and callback then
-        callback(nil, "Request failed")
+        callback(nil, "Request failed with exit code: " .. exit_code)
       end
     end,
   })
@@ -72,14 +92,23 @@ function M.upload(filepath)
     return
   end
 
-  print(string.format("[SFTP] Project: %s, File: %s", base_root, vim.fn.fnamemodify(filepath, ":t")))
-
   call_server("/upload", {
     base_root = base_root,
     file_path = filepath,
   }, function(response, err)
     if err then
-      print(string.format("[SFTP] Upload failed: %s", err))
+      vim.notify("[SFTP] ❌ " .. err, vim.log.levels.ERROR)
+    elseif response then
+      if type(response) == "table" then
+        if response.success then
+          local filename = vim.fn.fnamemodify(filepath, ":t")
+          vim.notify("[SFTP] ✓ " .. filename, vim.log.levels.INFO)
+        else
+          vim.notify("[SFTP] ❌ " .. (response.message or "Upload failed"), vim.log.levels.ERROR)
+        end
+      else
+        vim.notify("[SFTP] " .. tostring(response), vim.log.levels.INFO)
+      end
     end
   end)
 end
@@ -87,27 +116,35 @@ end
 -- Upload folder
 function M.upload_folder(folderpath)
   if not folderpath or folderpath == "" then
-    print("[SFTP] No folder path provided")
+    vim.notify("[SFTP] No folder path provided", vim.log.levels.WARN)
     return
   end
 
   local project_root, base_root = get_project_info(folderpath)
 
   if not base_root then
-    print("[SFTP] Not in a registered project")
+    vim.notify("[SFTP] Not in a registered project", vim.log.levels.WARN)
     return
   end
 
-  print(string.format("[SFTP] Uploading folder: %s", folderpath))
+  vim.notify("[SFTP] Uploading folder...", vim.log.levels.INFO)
 
   call_server("/upload-folder", {
     base_root = base_root,
     folder_path = folderpath,
   }, function(response, err)
     if err then
-      print(string.format("[SFTP] Folder upload failed: %s", err))
-    else
-      print(string.format("[SFTP] Folder uploaded successfully: %s", folderpath))
+      vim.notify("[SFTP] ❌ " .. err, vim.log.levels.ERROR)
+    elseif response then
+      if type(response) == "table" then
+        if response.success then
+          vim.notify("[SFTP] ✓ " .. (response.message or "Folder uploaded"), vim.log.levels.INFO)
+        else
+          vim.notify("[SFTP] ❌ " .. (response.message or "Folder upload failed"), vim.log.levels.ERROR)
+        end
+      else
+        vim.notify("[SFTP] " .. tostring(response), vim.log.levels.INFO)
+      end
     end
   end)
 end
@@ -115,29 +152,37 @@ end
 -- Download file
 function M.download_file(filepath)
   if not filepath or filepath == "" then
-    print("[SFTP] No file path provided")
+    vim.notify("[SFTP] No file path provided", vim.log.levels.WARN)
     return
   end
 
   local project_root, base_root = get_project_info(filepath)
 
   if not base_root then
-    print("[SFTP] Not in a registered project")
+    vim.notify("[SFTP] Not in a registered project", vim.log.levels.WARN)
     return
   end
 
-  print(string.format("[SFTP] Downloading file: %s", vim.fn.fnamemodify(filepath, ":t")))
+  vim.notify("[SFTP] Downloading...", vim.log.levels.INFO)
 
   call_server("/download", {
     base_root = base_root,
     file_path = filepath,
   }, function(response, err)
     if err then
-      print(string.format("[SFTP] Download failed: %s", err))
-    else
-      print(string.format("[SFTP] Downloaded: %s", filepath))
-      -- Reload the buffer if it's currently open
-      vim.cmd("checktime")
+      vim.notify("[SFTP] ❌ " .. err, vim.log.levels.ERROR)
+    elseif response then
+      if type(response) == "table" then
+        if response.success then
+          vim.notify("[SFTP] ✓ Downloaded", vim.log.levels.INFO)
+          vim.cmd("checktime")
+        else
+          vim.notify("[SFTP] ❌ " .. (response.message or "Download failed"), vim.log.levels.ERROR)
+        end
+      else
+        vim.notify("[SFTP] " .. tostring(response), vim.log.levels.INFO)
+        vim.cmd("checktime")
+      end
     end
   end)
 end
@@ -145,27 +190,35 @@ end
 -- Download folder
 function M.download_folder(folderpath)
   if not folderpath or folderpath == "" then
-    print("[SFTP] No folder path provided")
+    vim.notify("[SFTP] No folder path provided", vim.log.levels.WARN)
     return
   end
 
   local project_root, base_root = get_project_info(folderpath)
 
   if not base_root then
-    print("[SFTP] Not in a registered project")
+    vim.notify("[SFTP] Not in a registered project", vim.log.levels.WARN)
     return
   end
 
-  print(string.format("[SFTP] Downloading folder: %s", folderpath))
+  vim.notify("[SFTP] Downloading folder...", vim.log.levels.INFO)
 
   call_server("/download-folder", {
     base_root = base_root,
     folder_path = folderpath,
   }, function(response, err)
     if err then
-      print(string.format("[SFTP] Folder download failed: %s", err))
-    else
-      print(string.format("[SFTP] Folder downloaded successfully: %s", folderpath))
+      vim.notify("[SFTP] ❌ " .. err, vim.log.levels.ERROR)
+    elseif response then
+      if type(response) == "table" then
+        if response.success then
+          vim.notify("[SFTP] ✓ " .. (response.message or "Folder downloaded"), vim.log.levels.INFO)
+        else
+          vim.notify("[SFTP] ❌ " .. (response.message or "Folder download failed"), vim.log.levels.ERROR)
+        end
+      else
+        vim.notify("[SFTP] " .. tostring(response), vim.log.levels.INFO)
+      end
     end
   end)
 end
@@ -209,6 +262,123 @@ function M.download_folder_prompt()
       M.download_folder(input)
     end
   end)
+end
+
+-- Check if listener is running
+function M.is_running()
+  local pid_file = M.config.pid_file
+  if vim.fn.filereadable(pid_file) == 1 then
+    local lines = vim.fn.readfile(pid_file)
+    if lines and #lines > 0 then
+      local pid = lines[1]
+      if pid and pid ~= "" then
+        local result = vim.fn.system("ps -p " .. pid .. " > /dev/null 2>&1; echo $?")
+        local exit_code = result:match("%d+")
+        if exit_code then
+          return tonumber(exit_code) == 0
+        end
+      end
+    end
+  end
+  return false
+end
+
+-- Start the SFTP listener
+function M.start()
+  if M.is_running() then
+    vim.notify("[SFTP] Listener already running", vim.log.levels.INFO)
+    return
+  end
+
+  local listener_bin = M.config.listener_path .. "/sftp-listener"
+  if vim.fn.executable(listener_bin) ~= 1 then
+    vim.notify("[SFTP] ❌ Listener binary not found: " .. listener_bin, vim.log.levels.ERROR)
+    return
+  end
+
+  -- Check if config exists in nvim folder, if not copy from listener folder
+  if vim.fn.filereadable(M.config.config_path) ~= 1 then
+    local source_config = M.config.listener_path .. "/sftp-listener.json"
+    if vim.fn.filereadable(source_config) == 1 then
+      vim.fn.system(string.format("cp '%s' '%s'", source_config, M.config.config_path))
+      vim.notify("[SFTP] Config copied to nvim directory", vim.log.levels.INFO)
+    else
+      vim.notify("[SFTP] ❌ No config file found. Please create: " .. M.config.config_path, vim.log.levels.ERROR)
+      return
+    end
+  end
+
+  -- Start listener with config from nvim folder
+  local cmd = string.format(
+    "cd '%s' && CONFIG_PATH='%s' nohup '%s' > '%s' 2>&1 & echo $!",
+    M.config.listener_path,
+    M.config.config_path,
+    listener_bin,
+    M.config.log_file
+  )
+
+  local pid = vim.fn.system(cmd):gsub("%s+", "")
+  if pid and pid ~= "" then
+    vim.fn.writefile({ pid }, M.config.pid_file)
+    vim.defer_fn(function()
+      if M.is_running() then
+        vim.notify("[SFTP] ✓ Listener started (PID: " .. pid .. ")", vim.log.levels.INFO)
+      else
+        vim.notify("[SFTP] ❌ Failed to start. Check: " .. M.config.log_file, vim.log.levels.ERROR)
+      end
+    end, 500)
+  else
+    vim.notify("[SFTP] ❌ Failed to start listener", vim.log.levels.ERROR)
+  end
+end
+
+-- Stop the SFTP listener
+function M.stop()
+  if not M.is_running() then
+    vim.notify("[SFTP] Listener not running", vim.log.levels.INFO)
+    return
+  end
+
+  local pid = vim.fn.readfile(M.config.pid_file)[1]
+  if pid and pid ~= "" then
+    vim.fn.system("kill " .. pid)
+    vim.fn.delete(M.config.pid_file)
+    vim.notify("[SFTP] ✓ Listener stopped", vim.log.levels.INFO)
+  end
+end
+
+-- Toggle listener on/off
+function M.toggle()
+  if M.is_running() then
+    M.stop()
+  else
+    M.start()
+  end
+end
+
+-- Auto-start listener if configured
+function M.auto_start()
+  if M.config.auto_start then
+    -- Delay start to avoid conflicts with multiple nvim instances
+    vim.defer_fn(function()
+      if not M.is_running() then
+        M.start()
+      end
+    end, 1000)
+  end
+end
+
+-- Check if this is the last nvim instance
+local function is_last_nvim_instance()
+  local count = vim.fn.system("pgrep -f 'nvim' | wc -l"):gsub("%s+", "")
+  return tonumber(count) <= 1
+end
+
+-- Stop listener when last nvim exits
+function M.auto_stop()
+  if M.is_running() and is_last_nvim_instance() then
+    M.stop()
+  end
 end
 
 return M
