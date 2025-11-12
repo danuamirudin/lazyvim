@@ -1,6 +1,9 @@
 -- bootstrap lazy.nvim, LazyVim and your plugins
 require("config.lazy")
 
+-- Load default settings
+require("config.default")
+
 -- Load saved theme
 vim.defer_fn(function()
   require("config.themes").load_theme()

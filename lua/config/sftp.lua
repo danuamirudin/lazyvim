@@ -16,7 +16,7 @@ M.config = {
 local function get_project_info(filepath)
   -- First, use current working directory as the base
   local cwd = vim.fn.getcwd()
-  
+
   -- Try to get workspace name
   local ok, workspaces = pcall(require, "workspaces")
   if ok then
@@ -98,13 +98,13 @@ end
 function M.upload(filepath)
   -- Get current working directory
   local cwd = vim.fn.getcwd()
-  
+
   -- Check if file is within current workspace
   if filepath:sub(1, #cwd) ~= cwd then
     -- File is from a different workspace, skip silently
     return
   end
-  
+
   local project_root, base_root = get_project_info(filepath)
 
   if not base_root then
