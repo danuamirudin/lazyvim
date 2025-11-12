@@ -70,7 +70,7 @@ return {
             ignored = true,
           },
           explorer = {
-            hidden = true,
+            -- hidden = true,
             layout = {
               layout = {
                 position = "right",

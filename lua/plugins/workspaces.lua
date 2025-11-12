@@ -8,6 +8,13 @@ return {
       require("workspaces").setup({
         path = vim.fn.stdpath("data") .. "/workspaces",
         hooks = {
+          open_pre = function()
+            -- Save current session before switching
+            local ok, persistence = pcall(require, "persistence")
+            if ok then
+              persistence.save()
+            end
+          end,
           open = function(name, path)
             -- Change directory first
             vim.cmd("cd " .. path)
@@ -16,18 +23,29 @@ return {
             vim.schedule(function()
               local ok, persistence = pcall(require, "persistence")
               if ok then
-                -- Close all buffers before loading session
-                vim.cmd("silent! %bdelete")
-                
                 local session_file = persistence.current()
                 if session_file and vim.fn.filereadable(session_file) == 1 then
-                  -- Load the session
-                  persistence.load()
-                  vim.notify("✓ " .. name, vim.log.levels.INFO)
+                  -- Close all buffers before loading session
+                  vim.cmd("silent! %bdelete!")
+                  
+                  -- Small delay to ensure buffers are closed
+                  vim.defer_fn(function()
+                    persistence.load()
+                    
+                    -- Restart LSP clients after session load
+                    vim.defer_fn(function()
+                      vim.cmd("LspRestart")
+                    end, 200)
+                    
+                    vim.notify("✓ Loaded session: " .. name, vim.log.levels.INFO)
+                  end, 50)
                 else
-                  -- No session file, open file explorer
-                  vim.notify("⚠ " .. name .. " (no session)", vim.log.levels.WARN)
-                  vim.cmd("e .")
+                  -- No session file, just close current buffers and open explorer
+                  vim.cmd("silent! %bdelete!")
+                  vim.defer_fn(function()
+                    vim.notify("⚠ " .. name .. " (no session found)", vim.log.levels.WARN)
+                    vim.cmd("Neotree")
+                  end, 50)
                 end
               end
               

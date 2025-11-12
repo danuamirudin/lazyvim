@@ -5,7 +5,7 @@ return {
     opts = function(_, opts)
       -- Use noice for vim.notify
       vim.notify = require("noice").notify
-      
+
       return {
         presets = {
           bottom_search = true,
@@ -28,61 +28,61 @@ return {
           },
         },
         routes = {
-        {
-          filter = {
-            event = "notify",
-            min_height = 1,
+          {
+            filter = {
+              event = "notify",
+              min_height = 1,
+            },
+            view = "mini",
+            opts = { skip = false }, -- Keep in history
           },
-          view = "mini",
-          opts = { skip = false }, -- Keep in history
+          {
+            filter = {
+              event = "msg_show",
+              any = {
+                { find = "written" },
+                { find = "SFTP" },
+                { find = "session" },
+                { find = "Session" },
+                { find = "workspace" },
+                { find = "Workspace" },
+                { find = "Loaded" },
+                { find = "Switched" },
+              },
+            },
+            view = "mini",
+            opts = { skip = false }, -- Keep in history
+          },
         },
-        {
-          filter = {
-            event = "msg_show",
-            any = {
-              { find = "written" },
-              { find = "SFTP" },
-              { find = "session" },
-              { find = "Session" },
-              { find = "workspace" },
-              { find = "Workspace" },
-              { find = "Loaded" },
-              { find = "Switched" },
+        views = {
+          mini = {
+            backend = "mini",
+            relative = "editor",
+            align = "message-right",
+            timeout = 2000,
+            reverse = true,
+            position = {
+              row = -2,
+              col = "100%",
+            },
+            size = {
+              width = "auto",
+              height = "auto",
+              max_height = 1,
+            },
+            border = {
+              style = "none",
+            },
+            zindex = 60,
+            win_options = {
+              winblend = 0,
+              winhighlight = {
+                Normal = "NoicePopupmenu",
+                FloatBorder = "NoicePopupmenuBorder",
+              },
             },
           },
-          view = "mini",
-          opts = { skip = false }, -- Keep in history
         },
-      },
-      views = {
-        mini = {
-          backend = "mini",
-          relative = "editor",
-          align = "message-right",
-          timeout = 2000,
-          reverse = true,
-          position = {
-            row = -2,
-            col = "100%",
-          },
-          size = {
-            width = "auto",
-            height = "auto",
-            max_height = 1,
-          },
-          border = {
-            style = "none",
-          },
-          zindex = 60,
-          win_options = {
-            winblend = 0,
-            winhighlight = {
-              Normal = "NoicePopupmenu",
-              FloatBorder = "NoicePopupmenuBorder",
-            },
-          },
-        },
-      },
       }
     end,
     keys = {
@@ -104,9 +104,9 @@ return {
       {
         "<leader>n",
         function()
-          require("noice").cmd("last")
+          require("noice").cmd("telescope")
         end,
-        desc = "Last Message",
+        desc = "Noice Picker (Telescope)",
       },
       {
         "<leader>sna",
