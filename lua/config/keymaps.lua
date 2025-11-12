@@ -166,3 +166,9 @@ end, { desc = "Clear word highlight" })
 -- Cmd+X to cut line
 vim.keymap.set("n", "<D-x>", '"+dd', { desc = "Cut line to system clipboard" })
 vim.keymap.set("v", "<D-x>", '"+d', { desc = "Cut selection to system clipboard" })
+
+-- Visual Multi: Add cursors at start of each selected line
+vim.keymap.set("v", "<leader>gC", function()
+  vim.cmd([[execute "normal! \<Plug>(VM-Visual-Cursors)"]])
+  vim.cmd([[execute "normal! I"]])
+end, { desc = "Add cursors at start of lines" })

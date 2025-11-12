@@ -10,6 +10,7 @@ return {
         ["Skip Region"] = "<D-k>", -- Cmd + K - Skip current and find next
         ["Add Cursor Down"] = "<D-Down>",
         ["Add Cursor Up"] = "<D-Up>",
+        ["Visual Cursors"] = "<D-S-i>", -- Cmd + Shift + I - Cursors at start of each line
       }
 
       -- Optional tweaks
@@ -44,18 +45,22 @@ return {
           local mode = vim.fn.mode()
           if mode == "v" or mode == "V" or mode == "\22" then
             -- Visual mode: select all matches of visual selection
-            vim.cmd("normal! y") -- yank the selection
-            local search_pattern = vim.fn.getreg('"')
-            vim.fn.setreg('/', vim.fn.escape(search_pattern, '\\/.*$^~[]'))
-            vim.cmd([[execute "normal! \<Plug>(VM-Find-Under)"]])
-            vim.cmd([[execute "normal! \<Plug>(VM-Select-All)"]])
+            vim.cmd([[execute "normal! \<Plug>(VM-Visual-All)"]])
           else
             -- Normal mode: select all matches of word under cursor
-            vim.cmd([[execute "normal! \<Plug>(VM-Select-All)\<Tab>"]])
+            vim.cmd([[call vm#commands#find_all(0, 1)]])
           end
         end,
         mode = { "n", "v" },
         desc = "Select all occurrences (Cmd+Shift+L)",
+      },
+      {
+        "gC",
+        function()
+          vim.cmd([[execute "normal! \<Plug>(VM-Visual-Cursors)"]])
+        end,
+        mode = { "v" },
+        desc = "Add cursors at start of each selected line (leader mc)",
       },
     },
   },

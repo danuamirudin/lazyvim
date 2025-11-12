@@ -34,7 +34,15 @@ return {
                     
                     -- Restart LSP clients after session load
                     vim.defer_fn(function()
-                      vim.cmd("LspRestart")
+                      -- Stop all LSP clients
+                      for _, client in pairs(vim.lsp.get_active_clients()) do
+                        client.stop()
+                      end
+                      
+                      -- Restart LSP for current buffer
+                      vim.defer_fn(function()
+                        vim.cmd("edit")
+                      end, 100)
                     end, 200)
                     
                     vim.notify("✓ Loaded session: " .. name, vim.log.levels.INFO)
