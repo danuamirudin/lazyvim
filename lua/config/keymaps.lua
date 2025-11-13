@@ -170,3 +170,8 @@ vim.keymap.set("v", "<leader>gC", function()
   vim.cmd([[execute "normal! \<Plug>(VM-Visual-Cursors)"]])
   vim.cmd([[execute "normal! I"]])
 end, { desc = "Add cursors at start of lines" })
+
+-- Option+Delete (Alt+Backspace) - Delete word backward (token by token)
+vim.keymap.set("i", "<M-BS>", "<C-w>", { desc = "Delete word backward" })
+vim.keymap.set("i", "<A-BS>", "<C-w>", { desc = "Delete word backward" })
+vim.keymap.set("i", "<D-BS>", "<C-o>d0", { desc = "Delete word backward" })

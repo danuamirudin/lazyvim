@@ -7,6 +7,7 @@ return {
         "go",
         "html",
         "php",
+        "blade",
         "bash",
         "dockerfile",
         "diff",

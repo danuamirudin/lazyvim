@@ -377,6 +377,7 @@ return {
   end,
   keys = {
     { "<C-\\>", "<cmd>lua toggle_terminal(1)<cr>", desc = "Toggle terminal", mode = { "n", "t" } },
+    { "<D-t>", "<cmd>lua toggle_all_workspace_terminals()<cr>", desc = "Toggle all terminals" },
     { "<leader>tt", "<cmd>lua toggle_all_workspace_terminals()<cr>", desc = "Toggle all terminals" },
     { "<leader>tn", "<cmd>lua new_terminal_tab()<cr>", desc = "New terminal tab" },
     { "<C-n>", [[<C-\><C-n><cmd>lua cycle_terminal_tabs()<cr>]], desc = "Cycle terminal tabs", mode = "t" },

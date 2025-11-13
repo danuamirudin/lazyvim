@@ -1,1 +1,1 @@
-return "tokyonight-storm"
+return "onedark"
