@@ -155,7 +155,7 @@ M.load_theme = function()
     pcall(vim.cmd.colorscheme, theme)
   else
     -- Default theme
-    pcall(vim.cmd.colorscheme, "catppuccin-macchiato")
+    pcall(vim.cmd.colorscheme, "onedark")
   end
 end
 

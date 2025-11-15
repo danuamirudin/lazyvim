@@ -89,8 +89,8 @@ vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv", { desc = "Move selection down" })
 vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv", { desc = "Move selection up" })
 
 -- Normal mode keymaps
-vim.keymap.set("n", "<leader>h", "^", { desc = "Go to first non-blank character" })
-vim.keymap.set("n", "<leader>l", "$", { desc = "Go to end of line" })
+-- vim.keymap.set("n", "<leader>h", "^", { desc = "Go to first non-blank character" })
+-- vim.keymap.set("n", "<leader>l", "$", { desc = "Go to end of line" })
 vim.keymap.set("n", "J", ":m .+1<CR>==", { desc = "Move line down" })
 vim.keymap.set("n", "K", ":m .-2<CR>==", { noremap = true, silent = true, desc = "Move line up" })
 
