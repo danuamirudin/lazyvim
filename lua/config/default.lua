@@ -6,6 +6,13 @@ vim.g.autoformat = false
 vim.opt.wrap = true
 -- vim.opt.clipboard = "" -- don't use system clipboard by default
 
+-- Enable true color support
+vim.opt.termguicolors = true
+
+-- Cursor settings
+vim.opt.guicursor = "n-v-c:block-blinkwait700-blinkoff400-blinkon250,i-ci-ve:ver25-blinkwait700-blinkoff400-blinkon250,r-cr:hor20-blinkwait700-blinkoff400-blinkon250"
+vim.opt.cursorline = true
+
 -- Disable all animations
 -- vim.g.snacks_animate = false
 

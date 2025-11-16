@@ -5,9 +5,7 @@ require("config.lazy")
 require("config.default")
 
 -- Load saved theme
-vim.defer_fn(function()
-  require("config.themes").load_theme()
-end, 100)
+require("config.themes").load_theme()
 
 -- Load custom highlights
 require("config.highlights")

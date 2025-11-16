@@ -2,8 +2,7 @@ return {
   -- Tokyonight
   {
     "folke/tokyonight.nvim",
-    lazy = false,
-    priority = 1000,
+    lazy = true,
     opts = {
       --[[ transparent = true, ]]
     },
@@ -24,7 +23,8 @@ return {
   -- OneDark
   {
     "navarasu/onedark.nvim",
-    lazy = true,
+    lazy = false,
+    priority = 1000,
   },
   
   -- Dracula

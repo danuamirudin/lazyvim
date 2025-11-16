@@ -42,6 +42,40 @@ return {
       vim.wo[term.window].number = false
       vim.wo[term.window].relativenumber = false
       vim.cmd("startinsert!")
+      
+      -- Set up buffer-local keymaps for terminal normal mode
+      local bufnr = term.bufnr
+      vim.schedule(function()
+        if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
+          -- q to close terminal when in normal mode (not terminal mode)
+          vim.keymap.set("n", "q", "<cmd>lua toggle_all_workspace_terminals()<cr>", 
+            { buffer = bufnr, desc = "Close terminal" })
+          
+          -- Enable modifiers in terminal mode (pass through to shell)
+          -- Option+Delete (backward delete word)
+          vim.keymap.set("t", "<M-BS>", "<M-BS>", { buffer = bufnr })
+          -- Control+L (clear screen)
+          vim.keymap.set("t", "<C-l>", "<C-l>", { buffer = bufnr })
+          -- Control+U (clear line)
+          vim.keymap.set("t", "<C-u>", "<C-u>", { buffer = bufnr })
+          -- Control+W (backward delete word)
+          vim.keymap.set("t", "<C-w>", "<C-w>", { buffer = bufnr })
+          -- Control+A (beginning of line)
+          vim.keymap.set("t", "<C-a>", "<C-a>", { buffer = bufnr })
+          -- Control+E (end of line)
+          vim.keymap.set("t", "<C-e>", "<C-e>", { buffer = bufnr })
+          -- Control+R (history search)
+          vim.keymap.set("t", "<C-r>", "<C-r>", { buffer = bufnr })
+          -- Option+Left (word back)
+          vim.keymap.set("t", "<M-Left>", "<M-Left>", { buffer = bufnr })
+          -- Option+Right (word forward)
+          vim.keymap.set("t", "<M-Right>", "<M-Right>", { buffer = bufnr })
+          -- Option+B (word back)
+          vim.keymap.set("t", "<M-b>", "<M-b>", { buffer = bufnr })
+          -- Option+F (word forward)
+          vim.keymap.set("t", "<M-f>", "<M-f>", { buffer = bufnr })
+        end
+      end)
     end,
   },
   config = function(_, opts)
@@ -377,7 +411,7 @@ return {
   end,
   keys = {
     { "<C-\\>", "<cmd>lua toggle_terminal(1)<cr>", desc = "Toggle terminal", mode = { "n", "t" } },
-    { "<D-t>", "<cmd>lua toggle_all_workspace_terminals()<cr>", desc = "Toggle all terminals" },
+    { "<D-t>", "<cmd>lua toggle_all_workspace_terminals()<cr>", desc = "Toggle all terminals", mode = { "n", "t" } },
     { "<leader>tt", "<cmd>lua toggle_all_workspace_terminals()<cr>", desc = "Toggle all terminals" },
     { "<leader>tn", "<cmd>lua new_terminal_tab()<cr>", desc = "New terminal tab" },
     { "<C-n>", [[<C-\><C-n><cmd>lua cycle_terminal_tabs()<cr>]], desc = "Cycle terminal tabs", mode = "t" },
@@ -393,7 +427,6 @@ return {
     { "<C-h>", [[<C-\><C-n><C-w>h]], desc = "Navigate left", mode = "t" },
     { "<C-j>", [[<C-\><C-n><C-w>j]], desc = "Navigate down", mode = "t" },
     { "<C-k>", [[<C-\><C-n><C-w>k]], desc = "Navigate up", mode = "t" },
-    { "<C-l>", [[<C-\><C-n><C-w>l]], desc = "Navigate right", mode = "t" },
     -- Terminal mode keybindings
     { "jk", [[<C-\><C-n>]], desc = "Exit terminal mode", mode = "t" },
     { "<Esc>", [[<C-\><C-n>]], desc = "Exit terminal mode", mode = "t" },
