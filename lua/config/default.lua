@@ -6,6 +6,9 @@ vim.g.autoformat = false
 vim.opt.wrap = true
 -- vim.opt.clipboard = "" -- don't use system clipboard by default
 
+-- Suppress default save messages
+vim.opt.shortmess:append("WF")
+
 -- Enable true color support
 vim.opt.termguicolors = true
 
@@ -16,8 +19,7 @@ vim.opt.cursorline = true
 -- Disable all animations
 -- vim.g.snacks_animate = false
 
--- Additional animation disable for noice
--- vim.g.noice_animate = false
+
 
 
 -- coloer highlights for git conflicts

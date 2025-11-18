@@ -16,6 +16,15 @@ local sftp = require("config.sftp")
 -- Auto-start SFTP listener (will restart if already running)
 sftp.auto_start()
 
+-- Suppress write messages
+vim.api.nvim_create_autocmd("BufWritePre", {
+  group = vim.api.nvim_create_augroup("suppress_write_msg", { clear = true }),
+  pattern = "*",
+  callback = function()
+    vim.opt_local.shortmess:append("W")
+  end,
+})
+
 -- Create an autocommand group
 local group = vim.api.nvim_create_augroup("SFTPUpload", { clear = true })
 
@@ -25,8 +34,18 @@ vim.api.nvim_create_autocmd("BufWritePost", {
   pattern = "*",
   callback = function()
     local filepath = vim.fn.expand("%:p")
+    local filename = vim.fn.expand("%:t")
+    
+    -- Clear command line and show custom save message
+    vim.schedule(function()
+      vim.api.nvim_command("redraw")
+      if filename ~= "" then
+        vim.notify("💾 " .. filename, vim.log.levels.INFO)
+      end
+    end)
+    
     sftp.upload(filepath)
   end,
 })
 
-print("✓ SFTP upload on save enabled (auto-detect projects)")
+vim.notify("✓ SFTP upload on save enabled (auto-detect projects)")

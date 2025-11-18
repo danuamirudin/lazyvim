@@ -30,7 +30,10 @@ vim.api.nvim_create_autocmd({ "FocusLost", "BufLeave", "WinLeave" }, {
       
       -- Only save if file is within current workspace
       if filepath:sub(1, #cwd) == cwd then
+        local save_msg = vim.o.shortmess
+        vim.o.shortmess = save_msg .. "F"
         vim.cmd("silent! write")
+        vim.o.shortmess = save_msg
         -- Trigger SFTP upload after autosave (notification handled by sftp module)
         sftp.upload(filepath)
       end

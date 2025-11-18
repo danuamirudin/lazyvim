@@ -13,10 +13,21 @@ vim.keymap.set("n", "<D-a>", "gg<S-v>G", { desc = "Select all" })
 vim.opt.mouse = ""
 -- vim.opt.clipboard = "unnamedplus"
 
+-- Custom save function that suppresses messages
+local function save_file()
+  vim.cmd("silent! write")
+  vim.api.nvim_command("redraw")
+end
+
 -- Cmd+S to save
-vim.keymap.set("n", "<D-s>", ":w<CR>", { desc = "Save file" })
-vim.keymap.set("i", "<D-s>", "<Esc>:w<CR>a", { desc = "Save file and return to insert mode" })
-vim.keymap.set("v", "<D-s>", "<Esc>:w<CR>gv", { desc = "Save file and restore selection" })
+vim.keymap.set("n", "<D-s>", save_file, { desc = "Save file" })
+vim.keymap.set("i", "<D-s>", function()
+  save_file()
+end, { desc = "Save file" })
+vim.keymap.set("v", "<D-s>", function()
+  vim.cmd("normal! gv")
+  save_file()
+end, { desc = "Save file and restore selection" })
 
 -- make selection then cmd+c to copy to system clipboard
 vim.keymap.set("v", "<D-c>", '"+y', { desc = "Copy to system clipboard" })
@@ -181,3 +192,8 @@ end, { desc = "Add cursors at start of lines" })
 vim.keymap.set("i", "<M-BS>", "<C-w>", { desc = "Delete word backward" })
 vim.keymap.set("i", "<A-BS>", "<C-w>", { desc = "Delete word backward" })
 vim.keymap.set("i", "<D-BS>", "<C-o>d0", { desc = "Delete word backward" })
+
+-- Noice Telescope Picker
+vim.keymap.set("n", "<leader>n", function()
+  require("noice").cmd("telescope")
+end, { desc = "Noice Picker (Telescope)" })

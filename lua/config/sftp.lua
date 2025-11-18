@@ -12,32 +12,26 @@ M.config = {
   log_file = vim.fn.stdpath("config") .. "/sftp-listener.log",
 }
 
--- Progress notification helper - simplified for noice.nvim
-local progress_notifs = {}
+-- Progress notification helper using fidget.nvim
+local progress_handles = {}
 
 local function show_progress(key, message)
-  -- Show message with 60 second timeout and store the ID
-  local ok, noice = pcall(require, "noice")
+  local ok, fidget = pcall(require, "fidget")
   if ok then
-    -- Use noice route to create a notification with custom timeout
-    local notif = noice.notify(message, "info", { timeout = 60000 })
-    progress_notifs[key] = notif
+    progress_handles[key] = fidget.progress.handle.create({
+      title = "SFTP",
+      message = message,
+      lsp_client = { name = "sftp-listener" },
+    })
   else
-    vim.notify(message, vim.log.levels.INFO, { timeout = 60000 })
+    vim.notify(message, vim.log.levels.INFO)
   end
 end
 
 local function hide_progress(key)
-  -- Dismiss the progress notification immediately
-  if progress_notifs[key] then
-    local ok, noice = pcall(require, "noice")
-    if ok then
-      -- Hide the specific notification
-      pcall(function()
-        require("noice").notify("", "info", { replace = progress_notifs[key], timeout = 1 })
-      end)
-    end
-    progress_notifs[key] = nil
+  if progress_handles[key] then
+    progress_handles[key]:finish()
+    progress_handles[key] = nil
   end
 end
 
@@ -140,16 +134,19 @@ function M.upload(filepath)
     return
   end
 
+  local filename = vim.fn.fnamemodify(filepath, ":t")
+  show_progress("upload_file", "Uploading " .. filename .. "...")
+
   call_server("/upload", {
     base_root = base_root,
     file_path = filepath,
   }, function(response, err)
+    hide_progress("upload_file")
     if err then
       vim.notify("SFTP ❌ " .. err, vim.log.levels.ERROR)
     elseif response then
       if type(response) == "table" then
         if response.success then
-          local filename = vim.fn.fnamemodify(filepath, ":t")
           vim.notify("SFTP ✓ " .. filename, vim.log.levels.INFO)
         else
           vim.notify("SFTP ❌ " .. (response.message or "failed"), vim.log.levels.ERROR)
