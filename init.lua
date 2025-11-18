@@ -13,6 +13,9 @@ require("config.highlights")
 -- SFTP Upload on Save
 local sftp = require("config.sftp")
 
+-- Auto-start SFTP listener (will restart if already running)
+sftp.auto_start()
+
 -- Create an autocommand group
 local group = vim.api.nvim_create_augroup("SFTPUpload", { clear = true })
 

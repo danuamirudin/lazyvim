@@ -28,7 +28,7 @@ vim.keymap.set("i", "<D-v>", "<C-R>+", { desc = "Paste from system clipboard" })
 vim.keymap.set("n", "<leader>yfp", function()
   local full_path = vim.fn.expand("%:p")
   vim.fn.setreg("+", full_path)
-  print("Copied full path: " .. full_path)
+  vim.notify("Copied full path: " .. full_path)
 end, { desc = "Copy full file path" })
 
 -- Copy relative path
@@ -37,13 +37,13 @@ end, { desc = "Copy full file path" })
   local file_path = vim.fn.expand("%:p")
   local relative_path = file_path:sub(#git_root + 2) -- remove git root + '/'
   vim.fn.setreg("+", relative_path)
-  print("Copied relative path (git root): " .. relative_path)
+  vim.notify("Copied relative path (git root): " .. relative_path)
 end, { desc = "Copy relative file path from git root" }) ]]
 
 vim.keymap.set("n", "<leader>yrp", function()
   local relative_path = vim.fn.fnamemodify(vim.fn.expand("%"), ":.")
   vim.fn.setreg("+", relative_path)
-  print("Copied relative path: " .. relative_path)
+  vim.notify("Copied relative path: " .. relative_path)
 end, { desc = "Copy relative file path" })
 
 -- Custom <Esc> behavior for dismissing Copilot/cmp suggestions without leaving insert mode
@@ -134,7 +134,13 @@ vim.keymap.set("n", "<leader>fS", function()
 end, { desc = "SFTP: Stop Listener" })
 
 vim.keymap.set("n", "<leader>ft", function()
-  sftp.toggle()
+  if sftp.is_running() then
+    sftp.stop()
+    vim.notify("SFTP Listener is running. Stopping it now.")
+  else
+    sftp.start()
+    vim.notify("SFTP Listener is not running. Starting it now.")
+  end
 end, { desc = "SFTP: Toggle Listener" })
 
 -- Ctrl+Q to toggle hover (editor.action.showHover in VSCode)

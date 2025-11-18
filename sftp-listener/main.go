@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -48,16 +49,34 @@ type UploadResponse struct {
 	File    string `json:"file"`
 }
 
-var appConfig Config
+var (
+	appConfig   Config
+	configMutex sync.RWMutex
+	configPath  string
+)
 
 func main() {
+	configPath = os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "sftp-listener.json"
+	}
+
 	if err := loadConfig(); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	log.Printf("Starting HTTP server on port %s", appConfig.ServerPort)
-	log.Printf("Registered %d projects", len(appConfig.RegisteredProjects))
+	configMutex.RLock()
+	serverPort := appConfig.ServerPort
+	projectCount := len(appConfig.RegisteredProjects)
+	projects := make([]string, 0, projectCount)
 	for key := range appConfig.RegisteredProjects {
+		projects = append(projects, key)
+	}
+	configMutex.RUnlock()
+
+	log.Printf("Starting HTTP server on port %s", serverPort)
+	log.Printf("Registered %d projects", projectCount)
+	for _, key := range projects {
 		log.Printf("  - %s", key)
 	}
 
@@ -67,30 +86,60 @@ func main() {
 	http.HandleFunc("/download-folder", handleDownloadFolder)
 	http.HandleFunc("/health", handleHealth)
 	http.HandleFunc("/projects", handleListProjects)
+	http.HandleFunc("/reload", handleReload)
 
-	log.Fatal(http.ListenAndServe(":"+appConfig.ServerPort, nil))
+	log.Fatal(http.ListenAndServe(":"+serverPort, nil))
 }
 
 func loadConfig() error {
-	configPath := os.Getenv("CONFIG_PATH")
-	if configPath == "" {
-		configPath = "sftp-listener.json"
-	}
-
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	if err := json.Unmarshal(data, &appConfig); err != nil {
+	var newConfig Config
+	if err := json.Unmarshal(data, &newConfig); err != nil {
 		return fmt.Errorf("failed to parse config file: %w", err)
 	}
 
-	if appConfig.ServerPort == "" {
-		appConfig.ServerPort = "8765"
+	if newConfig.ServerPort == "" {
+		newConfig.ServerPort = "8765"
 	}
 
+	configMutex.Lock()
+	appConfig = newConfig
+	configMutex.Unlock()
+
 	return nil
+}
+
+func getConfig() Config {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+	return appConfig
+}
+
+func handleReload(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := loadConfig(); err != nil {
+		log.Printf("Failed to reload config: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"status":  "error",
+			"message": fmt.Sprintf("Failed to reload config: %v", err),
+		})
+		return
+	}
+
+	config := getConfig()
+	log.Printf("Config reloaded successfully. Registered %d projects", len(config.RegisteredProjects))
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":        "ok",
+		"message":       "Config reloaded successfully",
+		"project_count": len(config.RegisteredProjects),
+	})
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -103,8 +152,9 @@ func handleListProjects(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	projects := make([]string, 0, len(appConfig.RegisteredProjects))
-	for key := range appConfig.RegisteredProjects {
+	config := getConfig()
+	projects := make([]string, 0, len(config.RegisteredProjects))
+	for key := range config.RegisteredProjects {
 		projects = append(projects, key)
 	}
 
@@ -145,13 +195,14 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectConfig, exists := appConfig.RegisteredProjects[req.BaseRoot]
+	config := getConfig()
+	projectConfig, exists := config.RegisteredProjects[req.BaseRoot]
 	if !exists {
 		log.Printf("Project not registered: %s", req.BaseRoot)
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(UploadResponse{
 			Success: false,
-			Message: "Project not registered",
+			Message: fmt.Sprintf("Project not registered: %s", req.BaseRoot),
 		})
 		return
 	}
@@ -276,13 +327,14 @@ func handleUploadFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectConfig, exists := appConfig.RegisteredProjects[req.BaseRoot]
+	config := getConfig()
+	projectConfig, exists := config.RegisteredProjects[req.BaseRoot]
 	if !exists {
 		log.Printf("Project not registered: %s", req.BaseRoot)
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(UploadResponse{
 			Success: false,
-			Message: "Project not registered",
+			Message: fmt.Sprintf("Project not registered: %s", req.BaseRoot),
 		})
 		return
 	}
@@ -359,7 +411,7 @@ func handleDownload(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(UploadResponse{
 			Success: false,
-			Message: "Project not registered",
+			Message: fmt.Sprintf("Project not registered: %s", req.BaseRoot),
 		})
 		return
 	}
@@ -417,13 +469,14 @@ func handleDownloadFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	projectConfig, exists := appConfig.RegisteredProjects[req.BaseRoot]
+	config := getConfig()
+	projectConfig, exists := config.RegisteredProjects[req.BaseRoot]
 	if !exists {
 		log.Printf("Project not registered: %s", req.BaseRoot)
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(UploadResponse{
 			Success: false,
-			Message: "Project not registered",
+			Message: fmt.Sprintf("Project not registered: %s", req.BaseRoot),
 		})
 		return
 	}

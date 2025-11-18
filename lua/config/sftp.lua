@@ -5,12 +5,41 @@ local M = {}
 
 -- Configuration
 M.config = {
-  auto_start = true, -- Set to false to disable auto-start
+  auto_start = false, -- Set to false to disable auto-start
   listener_path = vim.fn.stdpath("config") .. "/sftp-listener",
   config_path = vim.fn.stdpath("config") .. "/sftp-listener.json",
   pid_file = vim.fn.stdpath("config") .. "/.sftp-listener.pid",
   log_file = vim.fn.stdpath("config") .. "/sftp-listener.log",
 }
+
+-- Progress notification helper - simplified for noice.nvim
+local progress_notifs = {}
+
+local function show_progress(key, message)
+  -- Show message with 60 second timeout and store the ID
+  local ok, noice = pcall(require, "noice")
+  if ok then
+    -- Use noice route to create a notification with custom timeout
+    local notif = noice.notify(message, "info", { timeout = 60000 })
+    progress_notifs[key] = notif
+  else
+    vim.notify(message, vim.log.levels.INFO, { timeout = 60000 })
+  end
+end
+
+local function hide_progress(key)
+  -- Dismiss the progress notification immediately
+  if progress_notifs[key] then
+    local ok, noice = pcall(require, "noice")
+    if ok then
+      -- Hide the specific notification
+      pcall(function()
+        require("noice").notify("", "info", { replace = progress_notifs[key], timeout = 1 })
+      end)
+    end
+    progress_notifs[key] = nil
+  end
+end
 
 -- Helper function to extract project info from path
 local function get_project_info(filepath)
@@ -100,7 +129,7 @@ function M.upload(filepath)
   local cwd = vim.fn.getcwd()
 
   -- Check if file is within current workspace
-  if filepath:sub(1, #cwd) ~= cwd then
+  if filepath:sub(1, #cwd) ~= cwd or M.is_running() == false then
     -- File is from a different workspace, skip silently
     return
   end
@@ -121,7 +150,7 @@ function M.upload(filepath)
       if type(response) == "table" then
         if response.success then
           local filename = vim.fn.fnamemodify(filepath, ":t")
-          vim.notify("✓ " .. filename, vim.log.levels.INFO)
+          vim.notify("SFTP ✓ " .. filename, vim.log.levels.INFO)
         else
           vim.notify("SFTP ❌ " .. (response.message or "failed"), vim.log.levels.ERROR)
         end
@@ -142,12 +171,13 @@ function M.upload_folder(folderpath)
     return
   end
 
-  vim.notify("⬆ Uploading folder...", vim.log.levels.INFO)
+  show_progress("upload_folder", "Uploading folder...")
 
   call_server("/upload-folder", {
     base_root = base_root,
     folder_path = folderpath,
   }, function(response, err)
+    hide_progress("upload_folder")
     if err then
       vim.notify("SFTP ❌ " .. err, vim.log.levels.ERROR)
     elseif response then
@@ -174,12 +204,13 @@ function M.download_file(filepath)
     return
   end
 
-  vim.notify("⬇ Downloading...", vim.log.levels.INFO)
+  show_progress("download_file", "Downloading...")
 
   call_server("/download", {
     base_root = base_root,
     file_path = filepath,
   }, function(response, err)
+    hide_progress("download_file")
     if err then
       vim.notify("SFTP ❌ " .. err, vim.log.levels.ERROR)
     elseif response then
@@ -211,12 +242,13 @@ function M.download_folder(folderpath)
     return
   end
 
-  vim.notify("[SFTP] Downloading folder...", vim.log.levels.INFO)
+  show_progress("download_folder", "Downloading folder...")
 
   call_server("/download-folder", {
     base_root = base_root,
     folder_path = folderpath,
   }, function(response, err)
+    hide_progress("download_folder")
     if err then
       vim.notify("[SFTP] ❌ " .. err, vim.log.levels.ERROR)
     elseif response then
@@ -253,7 +285,7 @@ end
 function M.download_current_buffer()
   local filepath = vim.fn.expand("%:p")
   if filepath == "" then
-    print("[SFTP] No file in current buffer")
+    vim.notify("[SFTP] No file in current buffer")
     return
   end
   M.download_file(filepath)
@@ -276,6 +308,13 @@ end
 
 -- Check if listener is running
 function M.is_running()
+  -- First check by port (most reliable)
+  local port_check = vim.fn.system("lsof -i :8765 -sTCP:LISTEN | grep -v COMMAND")
+  if port_check and port_check ~= "" then
+    return true
+  end
+
+  -- Fallback to PID file check
   local pid_file = M.config.pid_file
   if vim.fn.filereadable(pid_file) == 1 then
     local lines = vim.fn.readfile(pid_file)
@@ -333,7 +372,7 @@ function M.start()
       if not M.is_running() then
         vim.notify("SFTP ❌ Failed to start", vim.log.levels.ERROR)
       else
-        print("✓ SFTP upload on save enabled (auto-detect projects)")
+        vim.notify("✓ SFTP upload on save enabled (auto-detect projects)", vim.log.levels.INFO)
       end
     end, 500)
   else
@@ -341,17 +380,46 @@ function M.start()
   end
 end
 
+-- Restart the SFTP listener
+function M.restart()
+  if M.is_running() then
+    M.stop()
+    -- Wait longer for process to fully stop and port to be released
+    vim.defer_fn(function()
+      M.start()
+    end, 1500)
+  else
+    M.start()
+  end
+end
+
 -- Stop the SFTP listener
 function M.stop()
-  if not M.is_running() then
-    return
+  -- Kill by port if PID file is missing or stale
+  local killed_by_port = false
+  local pid_to_kill = vim.fn.system("lsof -ti :8765 2>/dev/null"):gsub("%s+", "")
+  if pid_to_kill and pid_to_kill ~= "" then
+    vim.fn.system("kill " .. pid_to_kill)
+    killed_by_port = true
   end
 
-  local pid = vim.fn.readfile(M.config.pid_file)[1]
-  if pid and pid ~= "" then
-    vim.fn.system("kill " .. pid)
-    vim.fn.delete(M.config.pid_file)
-    print("✓ SFTP listener stopped")
+  -- Also try PID file
+  local pid_file = M.config.pid_file
+  if vim.fn.filereadable(pid_file) == 1 then
+    local lines = vim.fn.readfile(pid_file)
+    if lines and #lines > 0 then
+      local pid = lines[1]
+      if pid and pid ~= "" and pid ~= pid_to_kill then
+        vim.fn.system("kill " .. pid)
+      end
+    end
+  end
+
+  if killed_by_port then
+    -- Wait for process to actually stop
+    vim.fn.system("sleep 0.5")
+    vim.fn.delete(pid_file)
+    vim.notify("✓ SFTP listener stopped", vim.log.levels.INFO)
   end
 end
 
@@ -367,12 +435,9 @@ end
 -- Auto-start listener if configured
 function M.auto_start()
   if M.config.auto_start then
-    -- Delay start to avoid conflicts with multiple nvim instances
-    vim.defer_fn(function()
-      if not M.is_running() then
-        M.start()
-      end
-    end, 1000)
+    M.restart()
+  else
+    M.stop()
   end
 end
 
