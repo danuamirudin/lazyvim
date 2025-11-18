@@ -7,3 +7,4 @@ foo.*
 *.log
 data
 sftp-listener.json
+.sftp-listener.pid

@@ -98,7 +98,11 @@ return {
           ".git",
           "public",
         },
-        grep = {},
+        grep = {
+          search = {
+            fixed_strings = false,
+          },
+        },
       },
     },
     keys = {
@@ -110,6 +114,7 @@ return {
               "--vimgrep",
               "--smart-case",
               "--hidden",
+              "--fixed-strings",
               "--glob",
               "!**/vendor/**",
               "--glob",
@@ -146,6 +151,7 @@ return {
                   "--vimgrep",
                   "--smart-case",
                   "--hidden",
+                  "--fixed-strings",
                   "--glob",
                   "!**/vendor/**",
                   "--glob",
