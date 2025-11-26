@@ -12,19 +12,36 @@ return {
             -- Set global flag to prevent toggleterm from opening
             vim.g.switching_workspace = true
             
-            -- Hide terminal windows (but keep buffers alive for this workspace)
-            local current_workspace = vim.fn.getcwd()
-            for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-              if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
-                -- Tag this terminal with its workspace
-                vim.b[buf].terminal_workspace = current_workspace
-                
-                -- Close windows showing this terminal
-                for _, win in ipairs(vim.api.nvim_list_wins()) do
-                  if vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win) == buf then
-                    pcall(vim.api.nvim_win_close, win, true)
-                  end
+            -- Close floaterm properly if it's open to avoid state issues
+            local floaterm_state_ok, floaterm_state = pcall(require, "floaterm.state")
+            if floaterm_state_ok and floaterm_state.volt_set then
+              -- Close floaterm windows and reset state
+              pcall(function()
+                if floaterm_state.win and vim.api.nvim_win_is_valid(floaterm_state.win) then
+                  vim.api.nvim_win_close(floaterm_state.win, true)
                 end
+                if floaterm_state.barwin and vim.api.nvim_win_is_valid(floaterm_state.barwin) then
+                  vim.api.nvim_win_close(floaterm_state.barwin, true)
+                end
+                if floaterm_state.sidewin and vim.api.nvim_win_is_valid(floaterm_state.sidewin) then
+                  vim.api.nvim_win_close(floaterm_state.sidewin, true)
+                end
+              end)
+              -- Reset floaterm state completely
+              floaterm_state.volt_set = false
+              floaterm_state.terminals = nil
+              floaterm_state.buf = nil
+              floaterm_state.sidebuf = nil
+              floaterm_state.barbuf = nil
+              floaterm_state.win = nil
+              floaterm_state.barwin = nil
+              floaterm_state.sidewin = nil
+              if floaterm_state.bar_redraw_timer then
+                pcall(function()
+                  floaterm_state.bar_redraw_timer:stop()
+                  floaterm_state.bar_redraw_timer:close()
+                end)
+                floaterm_state.bar_redraw_timer = nil
               end
             end
             
@@ -35,17 +52,6 @@ return {
             end
           end,
           open = function(name, path)
-            -- Hide all terminal windows (keep buffers for their workspaces)
-            for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-              if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
-                -- Close windows but keep buffer alive
-                for _, win in ipairs(vim.api.nvim_list_wins()) do
-                  if vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win) == buf then
-                    pcall(vim.api.nvim_win_close, win, true)
-                  end
-                end
-              end
-            end
             
             -- Change directory (this will trigger DirChanged autocmd)
             vim.cmd("cd " .. path)
@@ -56,7 +62,7 @@ return {
               if ok then
                 local session_file = persistence.current()
                 if session_file and vim.fn.filereadable(session_file) == 1 then
-                  -- Close all non-terminal buffers before loading session
+                  -- Close all buffers before loading session (except terminals - they persist globally)
                   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
                     if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype ~= "terminal" then
                       vim.api.nvim_buf_delete(buf, { force = true })
@@ -67,24 +73,6 @@ return {
                   vim.defer_fn(function()
                     persistence.load()
                     
-                    -- After loading session, hide terminals from other workspaces
-                    vim.defer_fn(function()
-                      local new_workspace = vim.fn.getcwd()
-                      for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-                        if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
-                          local buf_workspace = vim.b[buf].terminal_workspace
-                          -- If terminal belongs to different workspace, hide it
-                          if buf_workspace and buf_workspace ~= new_workspace then
-                            for _, win in ipairs(vim.api.nvim_list_wins()) do
-                              if vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win) == buf then
-                                pcall(vim.api.nvim_win_close, win, true)
-                              end
-                            end
-                          end
-                        end
-                      end
-                    end, 50)
-                    
                     -- Restart LSP clients after session load
                     vim.defer_fn(function()
                       -- Stop all LSP clients
@@ -94,7 +82,11 @@ return {
                       
                       -- Restart LSP for current buffer
                       vim.defer_fn(function()
-                        vim.cmd("edit")
+                        local buf = vim.api.nvim_get_current_buf()
+                        local bufname = vim.api.nvim_buf_get_name(buf)
+                        if bufname ~= "" and vim.fn.filereadable(bufname) == 1 then
+                          vim.cmd("edit")
+                        end
                       end, 100)
                     end, 250)
                     
@@ -106,7 +98,7 @@ return {
                     end, 100)
                   end, 50)
                 else
-                  -- No session file, close current buffers and open explorer
+                  -- No session file, close current buffers and open explorer (except terminals - they persist globally)
                   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
                     if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype ~= "terminal" then
                       vim.api.nvim_buf_delete(buf, { force = true })
@@ -162,20 +154,6 @@ return {
     opts = {
       options = { "buffers", "curdir", "tabpages", "winsize", "help", "globals", "skiprtp" },
       dir = vim.fn.stdpath("state") .. "/sessions/",
-      -- Don't save terminal buffers in sessions
-      pre_save = function()
-        -- Close terminal windows before saving (but keep buffers)
-        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-          if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
-            -- Close windows with this buffer
-            for _, win in ipairs(vim.api.nvim_list_wins()) do
-              if vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win) == buf then
-                pcall(vim.api.nvim_win_close, win, true)
-              end
-            end
-          end
-        end
-      end,
     },
     keys = {
       {

@@ -7,6 +7,53 @@
 -- Or remove existing autocmds by their group name (which is prefixed with `lazyvim_` for the defaults)
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
+-- Apply auto-format settings based on global config
+vim.api.nvim_create_autocmd("User", {
+  pattern = "VeryLazy",
+  callback = function()
+    local settings = vim.g.SETTINGS or { auto_format_on_save = false }
+    local enable_format = settings.auto_format_on_save
+    
+    vim.g.autoformat = enable_format
+    vim.b.autoformat = enable_format
+    
+    if not enable_format then
+      -- Delete LazyVim's auto format autocmd
+      pcall(vim.api.nvim_del_augroup_by_name, "lazyvim_format")
+      -- Disable conform format on save
+      pcall(function()
+        require("conform").setup({
+          format_on_save = nil,
+          format_after_save = nil,
+        })
+      end)
+    end
+  end,
+})
+
+-- Ensure autoformat and editorconfig respect settings for all buffers
+vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter"}, {
+  group = vim.api.nvim_create_augroup("apply_format_settings", { clear = true }),
+  callback = function()
+    local settings = vim.g.SETTINGS or { auto_format_on_save = false }
+    local enable_format = settings.auto_format_on_save
+    
+    vim.b.autoformat = enable_format
+    vim.b.editorconfig = enable_format
+  end,
+})
+
+-- Prevent modifying end of line when format disabled
+vim.api.nvim_create_autocmd("BufReadPost", {
+  group = vim.api.nvim_create_augroup("fixendofline_settings", { clear = true }),
+  callback = function()
+    local settings = vim.g.SETTINGS or { auto_format_on_save = false }
+    if not settings.auto_format_on_save then
+      vim.opt_local.fixendofline = false
+    end
+  end,
+})
+
 -- Import shared SFTP module
 local sftp = require("config.sftp")
 

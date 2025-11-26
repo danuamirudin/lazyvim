@@ -11,6 +11,7 @@ return {
         ["Add Cursor Down"] = "<D-Down>",
         ["Add Cursor Up"] = "<D-Up>",
         ["Visual Cursors"] = "<D-S-i>", -- Cmd + Shift + I - Cursors at start of each line
+        ["Toggle Mappings"] = "<Tab>", -- Tab to toggle extend mode (enables visual motions on all cursors)
       }
 
       -- Optional tweaks
@@ -44,11 +45,9 @@ return {
         function()
           local mode = vim.fn.mode()
           if mode == "v" or mode == "V" or mode == "\22" then
-            -- Visual mode: select all matches of visual selection
             vim.cmd([[execute "normal! \<Plug>(VM-Visual-All)"]])
           else
-            -- Normal mode: select all matches of word under cursor
-            vim.cmd([[call vm#commands#find_all(0, 1)]])
+            vim.cmd([[execute "normal! \<Plug>(VM-Select-All)"]])
           end
         end,
         mode = { "n", "v" },

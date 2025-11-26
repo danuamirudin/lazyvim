@@ -4,8 +4,24 @@ return {
     opts = {
       servers = {
         intelephense = {
+          on_attach = function(client, bufnr)
+            local settings = vim.g.SETTINGS or { auto_format_on_save = false }
+            -- Control formatting based on settings
+            if settings.auto_format_on_save then
+              -- Ensure formatting is enabled
+              client.server_capabilities.documentFormattingProvider = true
+              client.server_capabilities.documentRangeFormattingProvider = true
+            else
+              -- Disable formatting on save only
+              client.server_capabilities.documentFormattingProvider = false
+              client.server_capabilities.documentRangeFormattingProvider = false
+            end
+          end,
           settings = {
             intelephense = {
+              format = {
+                enable = true,
+              },
               stubs = {
                 "bcmath",
                 "bz2",

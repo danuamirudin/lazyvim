@@ -1,5 +1,29 @@
+-- ============================================
+-- GLOBAL SETTINGS - Configure everything here
+-- ============================================
+local SETTINGS = {
+  auto_format_on_save = false, -- Set to true to enable auto-format on save
+}
+-- ============================================
+
+-- Apply settings IMMEDIATELY
+vim.g.autoformat = SETTINGS.auto_format_on_save
+vim.b.autoformat = SETTINGS.auto_format_on_save
+vim.g.editorconfig = SETTINGS.auto_format_on_save
+vim.g.SETTINGS = SETTINGS -- Make available globally
+
+-- Block LSP formatting on save if disabled
+if not SETTINGS.auto_format_on_save then
+  vim.g.disable_autoformat = true
+end
+
 -- bootstrap lazy.nvim, LazyVim and your plugins
 require("config.lazy")
+
+-- Ensure autoformat respects settings after lazy loads
+vim.schedule(function()
+  vim.g.autoformat = SETTINGS.auto_format_on_save
+end)
 
 -- Load default settings
 require("config.default")
